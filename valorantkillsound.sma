@@ -34,6 +34,9 @@ public newkill()
     // Check if you are a valid player
     if (!is_user_connected(killer) || !is_user_connected(victim)) return
 
+    // Reset dead player's kill counter
+    g_iKills[victim] = 0
+
     if (killer == victim) return
 
     g_iKills[killer]++
