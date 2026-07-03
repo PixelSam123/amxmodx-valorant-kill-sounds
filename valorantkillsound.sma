@@ -18,7 +18,7 @@ public plugin_init()
 
 public plugin_precache()
 {
-    // Ses dosyalarını önbelleğe al
+    // Caching audio files
     precache_sound("alazul/kill1.wav")
     precache_sound("alazul/kill2.wav")
     precache_sound("alazul/kill3.wav")
@@ -31,7 +31,7 @@ public newkill()
     new killer = read_data(1)
     new victim = read_data(2)
 
-    // Geçerli oyuncu olup olmadığını kontrol et
+    // Check if you are a valid player
     if (!is_user_connected(killer) || !is_user_connected(victim)) return
 
     if (killer == victim) return
@@ -39,16 +39,16 @@ public newkill()
     g_iKills[killer]++
 
     new soundfile[64]
-    // Ses dosyası adını oluştur
+    // Create the audio file name
     format(soundfile, charsmax(soundfile), "alazul/kill%d.wav", min(g_iKills[killer], MAX_KILLS))
 
-    // Ses dosyasını oynat
+    // Play the audio file
     client_cmd(0, "spk %s", soundfile)
 }
 
 public round_start()
 {
-    // Her oyuncunun öldürme sayacını sıfırla
+    // Reset the kill counter for each player
     for (new id = 1; id <= MAX_PLAYERS; id++)
     {
         g_iKills[id] = 0
