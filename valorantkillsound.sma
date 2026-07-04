@@ -46,7 +46,7 @@ public newkill()
     format(soundfile, charsmax(soundfile), "alazul/kill%d.wav", min(g_iKills[killer], MAX_KILLS))
 
     // Play the audio file
-    client_cmd(0, "spk %s", soundfile)
+    client_cmd(killer, "spk %s", soundfile)
 }
 
 public round_start()
@@ -58,7 +58,7 @@ public round_start()
     }
 }
 
-public client_disconnect(id)
+public client_disconnected(id)
 {
     g_iKills[id] = 0
 }
