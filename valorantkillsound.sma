@@ -41,6 +41,17 @@ public newkill()
 
     g_iKills[killer]++
 
+    // Delay so the streak sound doesn't get cut off by the victim's
+    // death sound playing on the same CHAN_VOICE channel.
+    // Using killer as the task id replaces any pending task, so rapid
+    // multi-kills only play the latest streak sound.
+    set_task(0.3, "play_kill_sound", killer)
+}
+
+public play_kill_sound(killer)
+{
+    if (!is_user_connected(killer)) return
+
     new soundfile[64]
     // Create the audio file name
     format(soundfile, charsmax(soundfile), "alazul/kill%d.wav", min(g_iKills[killer], MAX_KILLS))
