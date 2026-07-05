@@ -45,7 +45,7 @@ public newkill()
     // death sound playing on the same CHAN_VOICE channel.
     // Using killer as the task id replaces any pending task, so rapid
     // multi-kills only play the latest streak sound.
-    set_task(0.3, "play_kill_sound", killer)
+    set_task(0.1, "play_kill_sound", killer)
 }
 
 public play_kill_sound(killer)
