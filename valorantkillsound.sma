@@ -6,31 +6,44 @@
 #define VERSION "1.0"
 #define AUTHOR "Alazul"
 
-#define MAX_KILLS 5
-
 // Counter-Strike observer modes (pev_iuser1). These differ from the
 // HLSDK constants in hlsdk_const.inc, which are the Half-Life values.
 #define CS_OBS_IN_EYE       4
 #define CS_OBS_CHASE_LOCKED 5
 #define CS_OBS_CHASE_FREE   6
 
+#define MAX_KILLS 5
+#define NUM_VARIATIONS 6
+
+new const g_szVariations[NUM_VARIATIONS][] = { "default", "aeris", "neofrontier", "kuronami", "reaver", "mystbloom" }
+new const g_szVariationDisplay[NUM_VARIATIONS][] = { "Default", "Aeris", "Neo Frontier", "Kuronami", "Reaver", "Mystbloom" }
+
 new g_iKills[MAX_PLAYERS + 1]
+new g_iVariation[MAX_PLAYERS + 1]
 
 public plugin_init()
 {
     register_plugin(PLUGIN, VERSION, AUTHOR)
     register_event("DeathMsg", "newkill", "a")
-    register_event("HLTV", "round_start", "a", "1=0") 
+    register_event("HLTV", "round_start", "a", "1=0")
+
+    register_clcmd("say .killsound", "cmd_killsound")
+    register_clcmd("say_team .killsound", "cmd_killsound")
+    register_clcmd("say .ks", "cmd_killsound")
+    register_clcmd("say_team .ks", "cmd_killsound")
 }
 
 public plugin_precache()
 {
-    // Caching audio files
-    precache_sound("alazul/kill1.wav")
-    precache_sound("alazul/kill2.wav")
-    precache_sound("alazul/kill3.wav")
-    precache_sound("alazul/kill4.wav")
-    precache_sound("alazul/kill5.wav")
+    new soundfile[64]
+    for (new v = 0; v < NUM_VARIATIONS; v++)
+    {
+        for (new i = 1; i <= MAX_KILLS; i++)
+        {
+            formatex(soundfile, charsmax(soundfile), "alazul/%s/kill%d.wav", g_szVariations[v], i)
+            precache_sound(soundfile)
+        }
+    }
 }
 
 public newkill()
@@ -52,7 +65,7 @@ public newkill()
     // death sound playing on the same CHAN_VOICE channel.
     // Using killer as the task id replaces any pending task, so rapid
     // multi-kills only play the latest streak sound.
-    set_task(0.1, "play_kill_sound", killer)
+    set_task(0.05, "play_kill_sound", killer)
 }
 
 // Returns the player being spectated by `id`, or 0 if `id` is not following
@@ -73,8 +86,12 @@ public play_kill_sound(killer)
     if (!is_user_connected(killer)) return
 
     new soundfile[64]
-    // Create the audio file name
-    format(soundfile, charsmax(soundfile), "alazul/kill%d.wav", min(g_iKills[killer], MAX_KILLS))
+    // Sound file picked is the killer's variation preference.
+    formatex(
+        soundfile, charsmax(soundfile),
+        "alazul/%s/kill%d.wav",
+        g_szVariations[g_iVariation[killer]], min(g_iKills[killer], MAX_KILLS)
+    )
 
     // Play the audio file to the killer and to anyone spectating them.
     for (new id = 1; id <= MAX_PLAYERS; id++)
@@ -95,7 +112,57 @@ public round_start()
     }
 }
 
+public client_putinserver(id)
+{
+    g_iKills[id] = 0
+    g_iVariation[id] = 0 // default
+}
+
 public client_disconnected(id)
 {
     g_iKills[id] = 0
+    g_iVariation[id] = 0
+}
+
+public cmd_killsound(id)
+{
+    show_killsound_menu(id)
+    return PLUGIN_HANDLED
+}
+
+show_killsound_menu(id)
+{
+    new menu = menu_create("\ySelect Kill Sound:", "killsound_menu_handler")
+    new itemName[32]
+    for (new v = 0; v < NUM_VARIATIONS; v++)
+    {
+        // Mark current selection
+        if (v == g_iVariation[id])
+            formatex(itemName, charsmax(itemName), "%s \r[Selected]", g_szVariationDisplay[v])
+        else
+            formatex(itemName, charsmax(itemName), "%s", g_szVariationDisplay[v])
+        menu_additem(menu, itemName)
+    }
+    menu_display(id, menu, 0)
+}
+
+public killsound_menu_handler(id, menu, item)
+{
+    if (item == MENU_EXIT)
+    {
+        menu_destroy(menu)
+        return PLUGIN_HANDLED
+    }
+
+    if (item < 0 || item >= NUM_VARIATIONS)
+    {
+        menu_destroy(menu)
+        return PLUGIN_HANDLED
+    }
+
+    g_iVariation[id] = item
+    client_print(id, print_chat, "[KillSound] Kill sound set to: %s", g_szVariationDisplay[item])
+
+    menu_destroy(menu)
+    return PLUGIN_HANDLED
 }
