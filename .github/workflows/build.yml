@@ -1,5 +1,8 @@
 name: Build AMXX Plugin
 
+env:
+  PLUGIN_NAME: valorantkillsound
+
 on:
   push:
     branches: [main]
@@ -16,9 +19,10 @@ jobs:
       - name: Install AMX Mod X compiler 1.10 (Linux)
         run: |
           wget -q https://github.com/alliedmodders/amxmodx/releases/download/1.10.0.5481/amxmodx-1.10.0-git5481-base-linux.tar.gz -O amxmodx.tar.gz
-          tar -xzf amxmodx.tar.gz
-          ls -lh addons/amxmodx/scripting/amxxpc*
-          AMXXPC=$(find . -name "amxxpc" -type f | head -n1)
+          mkdir -p amxmodx_linux
+          tar -xzf amxmodx.tar.gz -C amxmodx_linux
+          ls -lh amxmodx_linux/addons/amxmodx/scripting/amxxpc*
+          AMXXPC=$(find amxmodx_linux -name "amxxpc" -type f | head -n1)
           AMXXPC_DIR=$(dirname "$AMXXPC")
           echo "AMXXPC=$AMXXPC" >> $GITHUB_ENV
           echo "AMXXPC_DIR=$AMXXPC_DIR" >> $GITHUB_ENV
@@ -26,21 +30,21 @@ jobs:
           ls -la "$AMXXPC" "$AMXXPC_DIR/amxxpc32.so"
           chmod +x "$AMXXPC"
 
-      - name: Compile valorantkillsound.sma
+      - name: Compile ${{ env.PLUGIN_NAME }}.sma
         run: |
           mkdir -p amxmodx/scripting/compiled
           echo "Using compiler: $AMXXPC (dir $AMXXPC_DIR)"
           ls -la "$AMXXPC_DIR/amxxpc"*
           ls -la amxmodx/scripting/
-          LD_LIBRARY_PATH="$AMXXPC_DIR:$LD_LIBRARY_PATH" "$AMXXPC" amxmodx/scripting/valorantkillsound.sma -oamxmodx/scripting/compiled/valorantkillsound.amxx -iamxmodx/scripting/include -iaddons/amxmodx/scripting/include
+          LD_LIBRARY_PATH="$AMXXPC_DIR:$LD_LIBRARY_PATH" "$AMXXPC" amxmodx/scripting/${{ env.PLUGIN_NAME }}.sma -oamxmodx/scripting/compiled/${{ env.PLUGIN_NAME }}.amxx -iamxmodx/scripting/include -iamxmodx_linux/addons/amxmodx/scripting/include
           ls -lh amxmodx/scripting/compiled/
-          test -f amxmodx/scripting/compiled/valorantkillsound.amxx || { echo "Compile failed - artifact missing" >&2; exit 1; }
+          test -f amxmodx/scripting/compiled/${{ env.PLUGIN_NAME }}.amxx || { echo "Compile failed - artifact missing" >&2; exit 1; }
 
       - name: Upload artifact (Linux)
         uses: actions/upload-artifact@v4
         with:
-          name: valorantkillsound-linux.amxx
-          path: amxmodx/scripting/compiled/valorantkillsound.amxx
+          name: ${{ env.PLUGIN_NAME }}-linux.amxx
+          path: amxmodx/scripting/compiled/${{ env.PLUGIN_NAME }}.amxx
           if-no-files-found: error
 
   build_windows:
@@ -61,20 +65,20 @@ jobs:
           "AMXXPC_DIR=$AMXXPC_DIR" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Get-ChildItem $AMXXPC_DIR/amxxpc* | Format-List Name,Length,FullName
 
-      - name: Compile valorantkillsound.sma
+      - name: Compile ${{ env.PLUGIN_NAME }}.sma
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path amxmodx/scripting/compiled -Force | Out-Null
           Write-Host "Using compiler: $env:AMXXPC (dir $env:AMXXPC_DIR)"
           Get-ChildItem "$env:AMXXPC_DIR/amxxpc*" | Format-Table Name,Length
           Get-ChildItem amxmodx/scripting/ | Format-Table Name,Length
-          & $env:AMXXPC "amxmodx\scripting\valorantkillsound.sma" "-oamxmodx\scripting\compiled\valorantkillsound.amxx" "-iamxmodx\scripting\include" "-iamxmodx_win\addons\amxmodx\scripting\include"
+          & $env:AMXXPC "amxmodx\scripting\${{ env.PLUGIN_NAME }}.sma" "-oamxmodx\scripting\compiled\${{ env.PLUGIN_NAME }}.amxx" "-iamxmodx\scripting\include" "-iamxmodx_win\addons\amxmodx\scripting\include"
           Get-ChildItem amxmodx/scripting/compiled/ | Format-Table Name,Length
-          if (-not (Test-Path amxmodx/scripting/compiled/valorantkillsound.amxx)) { throw "Compile failed - artifact missing" }
+          if (-not (Test-Path amxmodx/scripting/compiled/${{ env.PLUGIN_NAME }}.amxx)) { throw "Compile failed - artifact missing" }
 
       - name: Upload artifact (Windows)
         uses: actions/upload-artifact@v4
         with:
-          name: valorantkillsound-windows.amxx
-          path: amxmodx/scripting/compiled/valorantkillsound.amxx
+          name: ${{ env.PLUGIN_NAME }}-windows.amxx
+          path: amxmodx/scripting/compiled/${{ env.PLUGIN_NAME }}.amxx
           if-no-files-found: error
