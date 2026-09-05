@@ -57,7 +57,11 @@ public newkill()
     // Reset dead player's kill counter
     g_iKills[victim] = 0
 
+    // Ignore self-kill
     if (killer == victim) return
+
+    // Ignore teamkills
+    if (get_user_team(killer) == get_user_team(victim)) return
 
     g_iKills[killer]++
 
