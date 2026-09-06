@@ -15,8 +15,14 @@
 #define MAX_KILLS 5
 #define NUM_VARIATIONS 6
 
-new const g_szVariations[NUM_VARIATIONS][] = { "default", "aeris", "neofrontier", "kuronami", "reaver", "mystbloom" }
-new const g_szVariationDisplay[NUM_VARIATIONS][] = { "Default", "Aeris", "Neo Frontier", "Kuronami", "Reaver", "Mystbloom" }
+new const g_szVariations[NUM_VARIATIONS][] =
+{
+    "default", "aeris", "neofrontier", "kuronami", "reaver", "mystbloom"
+}
+new const g_szVariationDisplay[NUM_VARIATIONS][] =
+{
+    "Default", "Aeris", "Neo Frontier", "Kuronami", "Reaver", "Mystbloom"
+}
 
 new g_iKills[MAX_PLAYERS + 1]
 new g_iVariation[MAX_PLAYERS + 1]
@@ -24,6 +30,7 @@ new g_iVariation[MAX_PLAYERS + 1]
 public plugin_init()
 {
     register_plugin(PLUGIN, VERSION, AUTHOR)
+
     register_event("DeathMsg", "newkill", "a")
     register_event("HLTV", "round_start", "a", "1=0")
 
@@ -36,13 +43,34 @@ public plugin_init()
 public plugin_precache()
 {
     new soundfile[64]
-    for (new v = 0; v < NUM_VARIATIONS; v++)
+    for (new v = 0; v < sizeof(g_szVariations); v++)
     {
         for (new i = 1; i <= MAX_KILLS; i++)
         {
             formatex(soundfile, charsmax(soundfile), "alazul/%s/kill%d.wav", g_szVariations[v], i)
             precache_sound(soundfile)
         }
+    }
+}
+
+public client_putinserver(id)
+{
+    g_iKills[id] = 0
+    g_iVariation[id] = 0 // default
+}
+
+public client_disconnected(id)
+{
+    g_iKills[id] = 0
+    g_iVariation[id] = 0
+}
+
+public round_start()
+{
+    // Reset the kill counter for each player
+    for (new id = 1; id <= MAX_PLAYERS; id++)
+    {
+        g_iKills[id] = 0
     }
 }
 
@@ -79,11 +107,16 @@ public newkill()
 // a specific player (alive, free-roaming, or in death/free cam).
 get_spectator_target(id)
 {
-    if (is_user_alive(id)) return 0
+    if (is_user_alive(id))
+    {
+        return 0
+    }
 
     new mode = pev(id, pev_iuser1)
     if (mode != CS_OBS_IN_EYE && mode != CS_OBS_CHASE_LOCKED && mode != CS_OBS_CHASE_FREE)
+    {
         return 0
+    }
 
     return pev(id, pev_iuser2)
 }
@@ -110,27 +143,6 @@ public play_kill_sound(killer)
     }
 }
 
-public round_start()
-{
-    // Reset the kill counter for each player
-    for (new id = 1; id <= MAX_PLAYERS; id++)
-    {
-        g_iKills[id] = 0
-    }
-}
-
-public client_putinserver(id)
-{
-    g_iKills[id] = 0
-    g_iVariation[id] = 0 // default
-}
-
-public client_disconnected(id)
-{
-    g_iKills[id] = 0
-    g_iVariation[id] = 0
-}
-
 public cmd_killsound(id)
 {
     show_killsound_menu(id)
@@ -140,16 +152,26 @@ public cmd_killsound(id)
 show_killsound_menu(id)
 {
     new menu = menu_create("\ySelect Kill Sound:", "killsound_menu_handler")
+
     new itemName[32]
-    for (new v = 0; v < NUM_VARIATIONS; v++)
+    new numStr[4]
+    for (new v = 0; v < sizeof(g_szVariations); v++)
     {
-        // Mark current selection
         if (v == g_iVariation[id])
+        {
             formatex(itemName, charsmax(itemName), "%s \r[Selected]", g_szVariationDisplay[v])
+        }
         else
+        {
             formatex(itemName, charsmax(itemName), "%s", g_szVariationDisplay[v])
+        }
+        num_to_str(v, numStr, charsmax(numStr))
+
         menu_additem(menu, itemName)
     }
+
+    menu_setprop(menu, MPROP_EXITNAME, "Exit")
+
     menu_display(id, menu, 0)
 }
 
@@ -161,14 +183,14 @@ public killsound_menu_handler(id, menu, item)
         return PLUGIN_HANDLED
     }
 
-    if (item < 0 || item >= NUM_VARIATIONS)
+    if (item < 0 || item >= sizeof(g_szVariations))
     {
         menu_destroy(menu)
         return PLUGIN_HANDLED
     }
 
     g_iVariation[id] = item
-    client_print(id, print_chat, "[KillSound] Kill sound set to: %s", g_szVariationDisplay[item])
+    client_print(id, print_chat, "[Kill Sound] Selected: %s", g_szVariationDisplay[item])
 
     menu_destroy(menu)
     return PLUGIN_HANDLED
